@@ -1,0 +1,65 @@
+devices:
+  - name: "iPhone-A"
+    udid: "your_device_udid_here"
+    local_port: 8100
+    mode: "wda"
+    apple_id: "+8613800138000"
+  - name: "iPhone-B"
+    udid: "another_device_udid_here"
+    local_port: 8200
+    mode: "wda"
+    apple_id: "+8613900139000"
+  - name: "iPhone-C"
+    udid: "third_device_udid_here"
+    local_port: 8300
+    mode: "mac"
+    apple_id: "user@icloud.com"
+    chatdb_path: "/Users/user_c/Library/Messages/chat.db"
+
+mac:
+  chat_db_path: "~/Library/Messages/chat.db"
+  poll_interval: 5
+
+wda:
+  poll_interval: 10
+  screenshot_dir: "./screenshots"
+
+webhook:
+  enabled: true
+  port: 9876
+
+ai:
+  provider: "openai"
+  base_url: "https://api.openai.com/v1"
+  api_key: "sk-your-api-key-here"
+  model: "gpt-4o-mini"
+  system_prompt: |
+    你是一个智能消息助手。请根据收到的消息内容，生成一条简短、自然、友好的回复。
+    回复要求：
+    - 语气自然，像真人在聊天
+    - 回复简洁，不超过50个字
+    - 不要提及你是AI
+    - 如果是问候，回复问候
+    - 如果是问题，给出简短回答
+    - 如果无法回答，礼貌地表示不清楚
+
+broadcast:
+  message: "你好，这是一条测试消息"
+  recipients:
+    - "+8613800138000"
+    - "example@icloud.com"
+  interval: 60
+  enabled: false
+
+auto_reply:
+  enabled: true
+  reply_delay_min: 3
+  reply_delay_max: 8
+  keyword_filters:
+    - "验证码"
+    - "快递"
+  blocked_senders: []
+
+logging:
+  level: "INFO"
+  file: "imessage_agent.log"
