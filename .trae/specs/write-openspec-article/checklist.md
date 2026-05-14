@@ -1,0 +1,17 @@
+- [x] openspec/ 目录已创建，与 openclaw/、imessage-agent/ 平级
+- [x] 文章文件 openspec/01-OpenSpec规范驱动开发完整指南.md 已创建
+- [x] 文章以 `# 标题` 开头，无 YAML frontmatter
+- [x] 文章章节使用中文序号（一、二、三...）
+- [x] 文章全文使用中文撰写
+- [x] 文章代码块带有语言标签（bash、yaml、typescript 等）
+- [x] 文章使用表格进行对比说明（至少3处表格）
+- [x] 文章涵盖 OpenSpec 的定义与核心理念
+- [x] 文章涵盖 specs/ 与 changes/ 分离的目录结构设计
+- [x] 文章涵盖安装与初始化步骤
+- [x] 文章涵盖 OPSX 核心工作流（explore、propose、apply、archive）
+- [x] 文章涵盖与 Superpowers 的三段式协同流程
+- [x] 文章涵盖任务粒度控制方法论（2/8法则、三步配置）
+- [x] 文章涵盖三层架构（OpenSpec + Superpowers + Harness/OMO）
+- [x] 文章涵盖场景选择指南
+- [x] 文章涵盖常见问题与避坑
+- [x] 文章内容为原创整合，非直接复制参考文章
