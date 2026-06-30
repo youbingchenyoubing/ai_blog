@@ -1,0 +1,103 @@
+# ===== Telegram 账户列表 =====
+# 支持两种账户类型：
+#   user  - 用户账户（Telethon，需要 api_id/api_hash + 手机号登录）
+#   bot   - 机器人账户（BotToken，无需手机号）
+accounts:
+  - name: "Account-A"
+    type: "user"                # user 或 bot
+    session: "sessions/account_a"  # .session 文件路径（不含扩展名）
+    api_id: 123456              # 从 https://my.telegram.org 获取
+    api_hash: "your_api_hash_here"
+    phone: "+8613800138000"     # 用户账户需要
+    proxy: null                 # 可选: ["socks5", "127.0.0.1", 1080]
+    enabled: true
+
+  - name: "Bot-B"
+    type: "bot"
+    session: "sessions/bot_b"
+    api_id: 123456
+    api_hash: "your_api_hash_here"
+    bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+    proxy: null
+    enabled: true
+
+  - name: "Account-C"
+    type: "user"
+    session: "sessions/account_c"
+    api_id: 123456
+    api_hash: "your_api_hash_here"
+    phone: "+8613900139000"
+    proxy: null
+    enabled: false
+
+# ===== 全局设置 =====
+global:
+  session_dir: "./sessions"     # 会话文件目录（自动创建）
+  poll_interval: 5              # 轮询间隔（秒）
+  flood_wait_max: 60            # FloodWait 最大容忍秒数
+  request_retry: 3              # 请求失败重试次数
+
+# ===== AI 配置 =====
+ai:
+  provider: "openai"            # openai 或 rule
+  base_url: "https://api.openai.com/v1"
+  api_key: "sk-your-api-key-here"
+  model: "gpt-4o-mini"
+  system_prompt: |
+    你是一个智能消息助手。请根据收到的消息内容，生成一条简短、自然、友好的回复。
+    回复要求：
+    - 语气自然，像真人在聊天
+    - 回复简洁，不超过50个字
+    - 不要提及你是AI
+    - 如果是问候，回复问候
+    - 如果是问题，给出简短回答
+    - 如果无法回答，礼貌地表示不清楚
+
+# ===== 群发配置 =====
+broadcast:
+  message: "你好，这是一条测试消息"
+  recipients:
+    - "@username1"
+    - "123456789"               # 也可以用 user_id 数字
+  interval: 60                  # 群发间隔（秒）
+  enabled: false                # 启动时是否自动群发
+
+# ===== 自动回复配置 =====
+auto_reply:
+  enabled: true
+  reply_delay_min: 3            # 最小回复延迟（秒）
+  reply_delay_max: 8            # 最大回复延迟（秒）
+  keyword_filters:              # 包含这些关键词的消息不自动回复
+    - "验证码"
+    - "快递"
+  blocked_senders: []           # 黑名单（user_id 或 username）
+  private_only: true            # 仅回复私聊，不回复群组
+
+# ===== 存活率优化（防封号）=====
+survival:
+  enabled: true                  # 总开关
+  warmup_days: 3                 # 新号养号期（天内严格限制操作频率）
+  keepalive_interval: 1800       # 保活间隔（秒），定期读取对话避免长时间无活动
+  active_hours: [8, 23]          # 活跃时段（24h 制），非活跃时段降低操作频率
+  jitter_max: 5                  # 操作抖动（秒），所有操作额外随机延迟
+  rate_limit:                    # 每账户独立限流（低于 Telegram 阈值）
+    per_minute: 15               # 每分钟最多 15 次（Telegram 默认 30）
+    per_hour: 150                # 每小时最多 150 次
+  device_fingerprint: true       # 使用真实设备指纹（iPhone/Android 主流型号）
+
+# ===== 资料管理（在线修改）=====
+# 通过 main.py profile 命令操作，也可在 config 中预定义批量任务
+profile:
+  # 批量资料更新（运行 main.py profile apply-all 时执行）
+  defaults:
+    first_name: ""
+    last_name: ""
+    about: ""
+    username: ""                 # 留空表示不修改
+  # 头像目录（profile set-photo --all 时按账户名匹配 <name>.jpg）
+  photo_dir: "./avatars"
+
+# ===== 日志配置 =====
+logging:
+  level: "INFO"
+  file: "telegram_agent.log"
