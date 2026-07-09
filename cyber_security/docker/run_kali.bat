@@ -1,1 +1,1 @@
-docker run -dit --name kali -v D:\docker_env\kali:/root kalilinux/kali-rolling /bin/bash
+docker run --privileged -dit --name kali -v D:\docker_env\kali:/root kalilinux/kali-rolling /bin/bash
