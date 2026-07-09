@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp 授权服务</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0b141a;
+      color: #e9edef;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .logo svg { width: 64px; height: 64px; }
+    .logo h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-top: 12px;
+      color: #00a884;
+    }
+    .logo p {
+      font-size: 14px;
+      color: #8696a0;
+      margin-top: 6px;
+    }
+
+    /* 卡片 */
+    .card {
+      background: #111b21;
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 20px;
+      border: 1px solid #233035;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon { font-size: 20px; }
+
+    /* 标签切换 */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      background: #111b21;
+      border-radius: 10px;
+      padding: 4px;
+      border: 1px solid #233035;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #8696a0;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: #00a884;
+      color: #111b21;
+    }
+    .tab:hover:not(.active) {
+      background: #1a2730;
+    }
+
+    /* 表单 */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: #8696a0;
+      margin-bottom: 6px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      background: #0b141a;
+      border: 1px solid #233035;
+      border-radius: 8px;
+      color: #e9edef;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: #00a884;
+    }
+    .form-group input::placeholder {
+      color: #4a5568;
+    }
+
+    /* 按钮 */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #00a884;
+      color: #111b21;
+    }
+    .btn-primary:hover { background: #00c49a; }
+    .btn-primary:disabled {
+      background: #233035;
+      color: #4a5568;
+      cursor: not-allowed;
+    }
+    .btn-danger {
+      background: #ea4335;
+      color: #fff;
+    }
+    .btn-danger:hover { background: #f5654a; }
+    .btn-sm {
+      padding: 8px 16px;
+      width: auto;
+      font-size: 13px;
+    }
+
+    /* 配对码展示 */
+    .pairing-code-display {
+      text-align: center;
+      padding: 30px 20px;
+    }
+    .pairing-code-label {
+      font-size: 13px;
+      color: #8696a0;
+      margin-bottom: 12px;
+    }
+    .pairing-code-value {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      color: #00a884;
+      font-family: 'Courier New', monospace;
+    }
+    .pairing-code-hint {
+      font-size: 12px;
+      color: #667781;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    /* 二维码展示 */
+    .qr-display {
+      text-align: center;
+      padding: 20px;
+    }
+    .qr-display canvas {
+      border-radius: 8px;
+    }
+    .qr-hint {
+      font-size: 12px;
+      color: #667781;
+      margin-top: 12px;
+    }
+
+    /* 状态指示 */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #111b21;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #233035;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.connecting { background: #f5a623; animation: pulse 1.5s infinite; }
+    .status-dot.connected { background: #00a884; }
+    .status-dot.error { background: #ea4335; }
+    .status-dot.disconnected { background: #8696a0; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .status-text {
+      font-size: 13px;
+      color: #8696a0;
+    }
+
+    /* 凭据展示 */
+    .credentials-box {
+      background: #0b141a;
+      border: 1px solid #233035;
+      border-radius: 8px;
+      padding: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #8696a0;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .credentials-box::-webkit-scrollbar {
+      width: 6px;
+    }
+    .credentials-box::-webkit-scrollbar-thumb {
+      background: #233035;
+      border-radius: 3px;
+    }
+
+    /* 步骤指引 */
+    .steps {
+      margin-top: 16px;
+    }
+    .step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #233035;
+      color: #8696a0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .step-text {
+      font-size: 13px;
+      color: #8696a0;
+      line-height: 24px;
+    }
+
+    /* 隐藏 */
+    .hidden { display: none !important; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: #111b21;
+      border: 1px solid #233035;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.success { border-color: #00a884; color: #00a884; }
+    .toast.error { border-color: #ea4335; color: #ea4335; }
+
+    /* 会话列表 */
+    .session-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #0b141a;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #233035;
+    }
+    .session-info { font-size: 13px; }
+    .session-id { color: #e9edef; font-weight: 500; }
+    .session-status { color: #8696a0; font-size: 12px; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Logo -->
+    <div class="logo">
+      <svg viewBox="0 0 39 39" fill="none">
+        <path d="M10.7 32.8l.6.3c2.5 1.5 5.3 2.2 8.1 2.2 8.8 0 16-7.2 16-16 0-4.2-1.7-8.3-4.7-11.3s-7-4.7-11.3-4.7c-8.8 0-16 7.2-15.9 16.1 0 3 .9 5.9 2.4 8.4l.4.6-1.5 5.5 5.9-1.1z" fill="#00a884"/>
+        <path d="M32.4 6.4C29 2.9 24.3 1 19.5 1 9.3 1 1.1 9.3 1.2 19.4c0 3.2.9 6.3 2.4 9.1L1 38l9.7-2.5c2.7 1.5 5.7 2.2 8.7 2.2 10.1 0 18.3-8.3 18.3-18.4 0-4.9-1.9-9.5-5.3-12.9zM19.5 34.6c-2.7 0-5.4-.7-7.7-2.1l-.6-.3-5.8 1.5L6.9 28l-.4-.6c-1.5-2.4-2.3-5.2-2.3-8 0-8.4 6.8-15.2 15.2-15.2 4.1 0 7.9 1.6 10.8 4.5 2.8 2.9 4.5 6.7 4.4 10.8-.1 8.3-6.9 15.1-15.1 15.1zm8.3-11.4c-.5-.2-2.7-1.3-3.1-1.5-.4-.2-.7-.2-1 .2-.3.5-1.2 1.5-1.5 1.8-.3.3-.5.3-1 .1s-2-0.7-3.8-2.3c-1.4-1.2-2.3-2.8-2.6-3.2-.3-.5 0-.7.2-1 .2-.2.5-.5.7-.8.2-.3.3-.5.5-.8.2-.3.1-.6 0-.8-.1-.2-1-2.4-1.4-3.3-.4-.9-.7-.8-1-.8-.3 0-.6 0-.9 0s-.8.1-1.3.6c-.4.5-1.7 1.6-1.7 4s1.7 4.6 2 4.9 3.4 5.2 8.3 7.3c1.2.5 2.1.8 2.8 1 1.2.4 2.3.3 3.1.2.9-.1 2.7-1.1 3.1-2.2.4-1.1.4-2 .3-2.2-.1-.2-.4-.3-.9-.5z" fill="#00a884"/>
+      </svg>
+      <h1>WhatsApp 授权</h1>
+      <p>通过配对码或二维码链接你的 WhatsApp</p>
+    </div>
+
+    <!-- 授权方式切换 -->
+    <div class="tabs">
+      <div class="tab active" data-tab="pairing" onclick="switchTab('pairing')">配对码</div>
+      <div class="tab" data-tab="qr" onclick="switchTab('qr')">二维码</div>
+      <div class="tab" data-tab="sessions" onclick="switchTab('sessions')">会话管理</div>
+    </div>
+
+    <!-- ============ 配对码面板 ============ -->
+    <div id="panel-pairing">
+      <!-- 输入手机号 -->
+      <div id="pairing-input" class="card">
+        <div class="card-title"><span class="icon">📱</span> 输入手机号</div>
+        <div class="form-group">
+          <label>手机号（含国家码，不含+号）</label>
+          <input type="text" id="phone-number" placeholder="如 5927342668" />
+        </div>
+        <div class="form-group">
+          <label>伪装平台</label>
+          <select id="pairing-platform">
+            <option value="android">Android</option>
+            <option value="ios">iOS</option>
+            <option value="web">Web</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btn-request-code" onclick="requestPairingCode()">
+          获取配对码
+        </button>
+      </div>
+
+      <!-- 配对码展示 -->
+      <div id="pairing-display" class="card hidden">
+        <div class="pairing-code-display">
+          <div class="pairing-code-label">你的配对码</div>
+          <div class="pairing-code-value" id="pairing-code-value">--------</div>
+          <div class="pairing-code-hint">
+            打开 WhatsApp → 设置 → 已链接设备 → 链接设备 → 改用手机号码链接
+          </div>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-text">打开手机上的 WhatsApp</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text">进入 设置 → 已链接设备</div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-text">点击"链接设备"</div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-text">选择"改用手机号码链接"</div>
+          </div>
+          <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-text">输入上方显示的8位配对码</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 等待状态 -->
+      <div id="pairing-status" class="hidden">
+        <div class="status-bar">
+          <div class="status-dot connecting" id="status-dot"></div>
+          <div class="status-text" id="status-text">等待配对...</div>
+        </div>
+      </div>
+
+      <!-- 授权成功 -->
+      <div id="pairing-success" class="card hidden">
+        <div class="card-title"><span class="icon">✅</span> 授权成功</div>
+        <div class="status-bar">
+          <div class="status-dot connected"></div>
+          <div class="status-text" id="connected-info">已连接</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary" style="flex:1" onclick="fetchCredentials()">获取凭据</button>
+          <button class="btn btn-danger btn-sm" onclick="disconnectSession()">断开</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 二维码面板 ============ -->
+    <div id="panel-qr" class="hidden">
+      <div id="qr-input" class="card">
+        <div class="card-title"><span class="icon">📷</span> 扫码授权</div>
+        <button class="btn btn-primary" id="btn-request-qr" onclick="requestQRCode()">
+          生成二维码
+        </button>
+      </div>
+
+      <div id="qr-display" class="card hidden">
+        <div class="qr-display">
+          <canvas id="qr-canvas"></canvas>
+          <div class="qr-hint">用 WhatsApp 扫描上方二维码</div>
+        </div>
+      </div>
+
+      <div id="qr-status" class="hidden">
+        <div class="status-bar">
+          <div class="status-dot connecting" id="qr-status-dot"></div>
+          <div class="status-text" id="qr-status-text">等待扫描...</div>
+        </div>
+      </div>
+
+      <div id="qr-success" class="card hidden">
+        <div class="card-title"><span class="icon">✅</span> 授权成功</div>
+        <div class="status-bar">
+          <div class="status-dot connected"></div>
+          <div class="status-text" id="qr-connected-info">已连接</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary" style="flex:1" onclick="fetchCredentials()">获取凭据</button>
+          <button class="btn btn-danger btn-sm" onclick="disconnectSession()">断开</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 会话管理面板 ============ -->
+    <div id="panel-sessions" class="hidden">
+      <div class="card">
+        <div class="card-title"><span class="icon">📋</span> 活跃会话</div>
+        <div id="sessions-list">
+          <div style="text-align:center;color:#667781;padding:20px;font-size:13px;">
+            暂无活跃会话
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="loadSessions()">刷新</button>
+      </div>
+
+      <!-- 凭据展示 -->
+      <div id="credentials-card" class="card hidden">
+        <div class="card-title"><span class="icon">🔑</span> 认证凭据</div>
+        <div class="credentials-box" id="credentials-content"></div>
+        <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="copyCredentials()">复制</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- QR Code 生成库 -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <script>
+    // ==================== 配置 ====================
+    const API_BASE = window.location.origin  // 同源部署，前后端同一域名
+
+    let currentSessionId = null
+    let pollTimer = null
+
+    // ==================== 工具函数 ====================
+    function showToast(msg, type = 'success') {
+      const t = document.getElementById('toast')
+      t.textContent = msg
+      t.className = `toast ${type} show`
+      setTimeout(() => t.classList.remove('show'), 3000)
+    }
+
+    async function api(path, method = 'GET', body = null) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      }
+      if (body) opts.body = JSON.stringify(body)
+      const res = await fetch(`${API_BASE}${path}`, opts)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '请求失败')
+      return data
+    }
+
+    // ==================== 标签切换 ====================
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+      document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active')
+
+      document.getElementById('panel-pairing').classList.toggle('hidden', tab !== 'pairing')
+      document.getElementById('panel-qr').classList.toggle('hidden', tab !== 'qr')
+      document.getElementById('panel-sessions').classList.toggle('hidden', tab !== 'sessions')
+
+      if (tab === 'sessions') loadSessions()
+    }
+
+    // ==================== 配对码授权 ====================
+    async function requestPairingCode() {
+      const phone = document.getElementById('phone-number').value.trim()
+      if (!phone) return showToast('请输入手机号', 'error')
+
+      const platform = document.getElementById('pairing-platform').value
+      const btn = document.getElementById('btn-request-code')
+      btn.disabled = true
+      btn.textContent = '请求中...'
+
+      try {
+        const data = await api('/api/auth/pairing-code', 'POST', {
+          phoneNumber: phone,
+          platform
+        })
+
+        currentSessionId = data.sessionId
+
+        if (data.pairingCode) {
+          // 显示配对码
+          document.getElementById('pairing-code-value').textContent =
+            data.pairingCode.slice(0, 4) + '-' + data.pairingCode.slice(4)
+          document.getElementById('pairing-input').classList.add('hidden')
+          document.getElementById('pairing-display').classList.remove('hidden')
+          document.getElementById('pairing-status').classList.remove('hidden')
+          startPolling()
+        } else {
+          // 配对码还没生成，等一下再查
+          document.getElementById('pairing-input').classList.add('hidden')
+          document.getElementById('pairing-status').classList.remove('hidden')
+          document.getElementById('status-text').textContent = '正在生成配对码...'
+          startPolling()
+        }
+
+        showToast('配对码请求已发送')
+      } catch (err) {
+        showToast(err.message, 'error')
+      } finally {
+        btn.disabled = false
+        btn.textContent = '获取配对码'
+      }
+    }
+
+    // ==================== 二维码授权 ====================
+    async function requestQRCode() {
+      const btn = document.getElementById('btn-request-qr')
+      btn.disabled = true
+      btn.textContent = '生成中...'
+
+      try {
+        const data = await api('/api/auth/qr-code', 'POST', {})
+
+        currentSessionId = data.sessionId
+
+        if (data.qrCode) {
+          // 渲染二维码
+          const canvas = document.getElementById('qr-canvas')
+          await QRCode.toCanvas(canvas, data.qrCode, {
+            width: 256,
+            margin: 2,
+            color: { dark: '#000000', light: '#ffffff' }
+          })
+          document.getElementById('qr-input').classList.add('hidden')
+          document.getElementById('qr-display').classList.remove('hidden')
+          document.getElementById('qr-status').classList.remove('hidden')
+          startPolling('qr')
+        }
+
+        showToast('二维码已生成')
+      } catch (err) {
+        showToast(err.message, 'error')
+      } finally {
+        btn.disabled = false
+        btn.textContent = '生成二维码'
+      }
+    }
+
+    // ==================== 状态轮询 ====================
+    function startPolling(mode = 'pairing') {
+      if (pollTimer) clearInterval(pollTimer)
+
+      pollTimer = setInterval(async () => {
+        if (!currentSessionId) return
+
+        try {
+          const info = await api(`/api/auth/status/${currentSessionId}`)
+          updateStatus(info, mode)
+        } catch (e) {
+          // 会话可能已过期
+          clearInterval(pollTimer)
+        }
+      }, 3000)
+    }
+
+    function updateStatus(info, mode) {
+      const prefix = mode === 'qr' ? 'qr-' : ''
+
+      const dot = document.getElementById(`${prefix}status-dot`)
+      const text = document.getElementById(`${prefix}status-text`)
+
+      if (info.status === 'connected') {
+        clearInterval(pollTimer)
+        dot.className = 'status-dot connected'
+        text.textContent = `已连接: ${info.me?.id || 'unknown'}`
+
+        // 显示成功卡片
+        const successEl = document.getElementById(`${prefix}success`)
+        successEl.classList.remove('hidden')
+        const connectedInfo = document.getElementById(`${prefix}connected-info`)
+        if (connectedInfo) connectedInfo.textContent = `已连接: ${info.me?.id || 'unknown'}`
+
+        showToast('WhatsApp 授权成功！')
+      } else if (info.status === 'logged_out') {
+        clearInterval(pollTimer)
+        dot.className = 'status-dot error'
+        text.textContent = '授权失败，请重试'
+        showToast('授权失败', 'error')
+      } else if (info.status === 'pairing_code_ready') {
+        dot.className = 'status-dot connecting'
+        text.textContent = '等待输入配对码...'
+        if (info.pairingCode) {
+          document.getElementById('pairing-code-value').textContent =
+            info.pairingCode.slice(0, 4) + '-' + info.pairingCode.slice(4)
+        }
+      } else if (info.status === 'qr_ready') {
+        dot.className = 'status-dot connecting'
+        text.textContent = '等待扫描二维码...'
+      } else {
+        dot.className = 'status-dot connecting'
+        text.textContent = '连接中...'
+      }
+    }
+
+    // ==================== 获取凭据 ====================
+    async function fetchCredentials() {
+      if (!currentSessionId) return showToast('无活跃会话', 'error')
+
+      try {
+        const creds = await api(`/api/auth/credentials/${currentSessionId}`)
+        document.getElementById('credentials-content').textContent = JSON.stringify(creds, null, 2)
+        document.getElementById('credentials-card').classList.remove('hidden')
+        showToast('凭据已获取')
+      } catch (err) {
+        showToast(err.message, 'error')
+      }
+    }
+
+    function copyCredentials() {
+      const text = document.getElementById('credentials-content').textContent
+      navigator.clipboard.writeText(text)
+      showToast('已复制到剪贴板')
+    }
+
+    // ==================== 断开会话 ====================
+    async function disconnectSession() {
+      if (!currentSessionId) return
+
+      try {
+        await api(`/api/auth/session/${currentSessionId}?deleteCredentials=true`, 'DELETE')
+        clearInterval(pollTimer)
+        currentSessionId = null
+        showToast('会话已断开')
+
+        // 重置 UI
+        resetUI()
+      } catch (err) {
+        showToast(err.message, 'error')
+      }
+    }
+
+    function resetUI() {
+      // 配对码面板
+      document.getElementById('pairing-input').classList.remove('hidden')
+      document.getElementById('pairing-display').classList.add('hidden')
+      document.getElementById('pairing-status').classList.add('hidden')
+      document.getElementById('pairing-success').classList.add('hidden')
+
+      // 二维码面板
+      document.getElementById('qr-input').classList.remove('hidden')
+      document.getElementById('qr-display').classList.add('hidden')
+      document.getElementById('qr-status').classList.add('hidden')
+      document.getElementById('qr-success').classList.add('hidden')
+
+      // 凭据
+      document.getElementById('credentials-card').classList.add('hidden')
+    }
+
+    // ==================== 会话管理 ====================
+    async function loadSessions() {
+      try {
+        const data = await api('/api/auth/sessions')
+        const listEl = document.getElementById('sessions-list')
+
+        if (data.active.length === 0 && data.saved.length === 0) {
+          listEl.innerHTML = '<div style="text-align:center;color:#667781;padding:20px;font-size:13px;">暂无会话</div>'
+          return
+        }
+
+        let html = ''
+
+        data.active.forEach(s => {
+          html += `
+            <div class="session-item">
+              <div class="session-info">
+                <div class="session-id">${s.me?.id || s.sessionId}</div>
+                <div class="session-status">状态: ${s.status} | 平台: ${s.platform}</div>
+              </div>
+              <button class="btn btn-danger btn-sm" onclick="deleteSession('${s.sessionId}')">断开</button>
+            </div>`
+        })
+
+        data.saved.forEach(id => {
+          if (!data.active.find(a => a.sessionId === id)) {
+            html += `
+              <div class="session-item">
+                <div class="session-info">
+                  <div class="session-id">${id}</div>
+                  <div class="session-status">已保存（离线）</div>
+                </div>
+                <div style="display:flex;gap:4px">
+                  <button class="btn btn-primary btn-sm" onclick="restoreSession('${id}')">恢复</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteSession('${id}')">删除</button>
+                </div>
+              </div>`
+          }
+        })
+
+        listEl.innerHTML = html
+      } catch (err) {
+        showToast(err.message, 'error')
+      }
+    }
+
+    async function deleteSession(sid) {
+      try {
+        await api(`/api/auth/session/${sid}?deleteCredentials=true`, 'DELETE')
+        showToast('会话已删除')
+        loadSessions()
+      } catch (err) {
+        showToast(err.message, 'error')
+      }
+    }
+
+    async function restoreSession(sid) {
+      try {
+        const data = await api(`/api/auth/restore/${sid}`, 'POST')
+        currentSessionId = sid
+        showToast(`会话恢复中: ${data.status}`)
+        loadSessions()
+      } catch (err) {
+        showToast(err.message, 'error')
+      }
+    }
+  </script>
+</body>
+</html>
