@@ -1,2 +1,4 @@
 .idea
 .pip_packages
+temp/
+tmp
