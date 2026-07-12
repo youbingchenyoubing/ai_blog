@@ -1,9 +1,11 @@
 FROM kalilinux/kali-rolling:latest
 LABEL maintainer="admin@csalab.id"
-RUN sed -i "s/http.kali.org/mirrors.ocf.berkeley.edu/g" /etc/apt/sources.list && \
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN sed -i "s|http://http.kali.org/kali|https://mirrors.aliyun.com/kali|g" /etc/apt/sources.list.d/kali.sources && \
     apt-get update && \
-    apt-get -y upgrade
-RUN DEBIAN_FRONTEND=noninteractive apt-get -yq install \
+    apt-get -y upgrade && \
+    DEBIAN_FRONTEND=noninteractive apt-get -yq install \
     sudo \
     openssh-server \
     python2 \
@@ -17,12 +19,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -yq install \
     tigervnc-xorg-extension \
     tigervnc-viewer \
     novnc \
-    dbus-x11
-RUN DEBIAN_FRONTEND=noninteractive apt-get -yq install \
+    dbus-x11 \
+    kali-linux-headless && \
+    DEBIAN_FRONTEND=noninteractive apt-get -yq install \
     xfce4-goodies \
     kali-desktop-xfce && \
-    apt-get -y full-upgrade
-RUN apt-get -y autoremove && \
+    apt-get -y full-upgrade && \
+    apt-get -y autoremove && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m -c "Kali Linux" -s /bin/bash -d /home/kali kali && \
@@ -31,6 +34,7 @@ RUN apt-get -y autoremove && \
     echo "kali ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     mkdir /run/dbus && \
     touch /usr/share/novnc/index.htm
+
 COPY startup.sh /startup.sh
 USER kali
 WORKDIR /home/kali

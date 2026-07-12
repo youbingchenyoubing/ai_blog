@@ -328,6 +328,7 @@ hydra -l admin -P pass.txt http://target.com/ http-get \
 
 ## 二、Misc 方向
 
+> 题型全景、解题决策树、各子题型深度实战（隐写术、流量分析、压缩包取证、多媒体隐写、内存取证、OSINT）见 [Misc 实战使用指南](Misc实战使用指南.md)。本节为日常高频用法速查。
 > 本方向重点推荐：★CyberChef（编解码瑞士军刀，Magic 自动识别）｜★Wireshark（流量分析必备，pcap 解析核心）｜★binwalk（文件结构识别与自动提取）
 > 使用方法：CyberChef → 2.7 + 独立指南 ｜ Wireshark → 2.5 + 独立指南 ｜ binwalk → 2.10
 > 各相似工具组的选用逻辑见下方"工具选用建议"段落
@@ -337,7 +338,7 @@ hydra -l admin -P pass.txt http://target.com/ http-get \
 | 工具              | 用途           | 关键用法                                                                                                                  | GitHub 地址                                        |
 | --------------- | ------------ | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | ★CyberChef      | 编解码瑞士军刀      | 在线拖拽操作链（From Base64 → From Hex → ...）支持 Magic 自动识别 → 详见 [CyberChef 指南](CyberChef实战使用指南.md)                            | <https://github.com/gchq/CyberChef>              |
-| ★Wireshark      | 流量分析         | 显示过滤器 `http contains "flag"`Follow → TCP Stream 看会话File → Export Objects 还原文件 → 详见 [Wireshark 指南](Wireshark实战使用指南.md) | <https://github.com/wireshark/wireshark>         |
+| ★Wireshark      | 流量分析         | 显示过滤器 `http contains "flag"`Follow → TCP Stream 看会话File → Export Objects 还原文件 → 详见 [Wireshark 指南](Wireshark实战使用指南.md) [深度手册](Wireshark深度使用手册.md) | <https://github.com/wireshark/wireshark>         |
 | ★binwalk        | 文件分析/提取      | `binwalk file` 分析结构`binwalk -e file` 自动提取隐藏文件                                                                         | <https://github.com/ReFirmLabs/binwalk>          |
 | foremost        | 文件恢复         | `foremost -i file -o output/`按文件头 carving，不依赖格式识别                                                                     | SourceForge: <https://foremost.sourceforge.net/> |
 | ★zsteg          | PNG/BMP 隐写检测 | `zsteg file.png` 自动检测 LSB`zsteg -a file.png` 全通道扫描                                                                    | <https://github.com/zed-0xff/zsteg>              |
@@ -352,7 +353,7 @@ hydra -l admin -P pass.txt http://target.com/ http-get \
 **工具选用建议**：
 
 - 编解码：CyberChef ★ 全能型，拖拽操作链 + Magic 自动识别，浏览器在线用最方便；本地批量解码用下方 2.2 脚本
-- 流量分析：Wireshark ★ 看 pcap 必备，完整过滤器语法、文件还原、USB 取证见 [Wireshark 指南](Wireshark实战使用指南.md)；批量提取字段用配套的 tshark 命令行
+- 流量分析：Wireshark ★ 看 pcap 必备，完整过滤器语法、文件还原、USB 取证见 [Wireshark 指南](Wireshark实战使用指南.md)；高级抓包、深度协议解析、网络取证、Lua 解析器、自动化流水线见 [Wireshark 深度手册](Wireshark深度使用手册.md)；批量提取字段用配套的 tshark 命令行
 - 文件提取：binwalk ★ 自动识别文件结构并提取（含固件、嵌套压缩包）；foremost 按文件头 carving，binwalk 识别失败时换它，两者互补
 - PNG/BMP 隐写：zsteg ★ 命令行一键自动检测 LSB，CTF 首选；StegSolve 是 Java GUI，适合逐通道人工观察、Extract Data 提取位平面，两者搭配用
 - 密码破解：John 通用哈希破解（MD5/SHA 等，支持多种格式）；fcrackzip 专攻 ZIP，`-u` 验证避免误报；哈希暴力破解首选 hashcat（见 Crypto 章节，GPU 加速）
@@ -650,7 +651,7 @@ if __name__ == "__main__":
 
 ### 2.5 流量分析常用技巧
 
-> 完整过滤器语法、文件还原、USB 键鼠取证、tshark 批处理见 [Wireshark 实战使用指南](Wireshark实战使用指南.md)。
+> 完整过滤器语法、文件还原、USB 键鼠取证、tshark 批处理见 [Wireshark 实战使用指南](Wireshark实战使用指南.md)。高级抓包、TLS/无线深度解析、网络取证工作流、Lua 解析器、自动化流水线见 [Wireshark 深度使用手册](Wireshark深度使用手册.md)。
 
 ```bash
 # Wireshark 过滤器
@@ -1353,7 +1354,7 @@ sage: f = FactorDB(n); f.connect(); p, q = f.get_factor_list()
 ## 四、Reverse 方向
 
 > 本方向重点推荐：★IDA Pro（静态反编译，F5 伪代码质量最高）｜★GDB + pwndbg（Linux 动态调试标配，逆向/PWN 通用）｜★jadx（Android 一键反编译出 Java 源码，GUI 浏览）
-> 使用方法：IDA Pro → 独立指南 ｜ GDB + pwndbg → 4.4 ｜ jadx → 4.7
+> 使用方法：IDA Pro → 独立指南 ｜ GDB + pwndbg → 独立指南 ｜ jadx → 4.7
 > 各相似工具组的选用逻辑见下方"工具选用建议"段落
 
 ### 4.1 工具清单
@@ -1363,7 +1364,7 @@ sage: f = FactorDB(n); f.connect(); p, q = f.get_factor_list()
 | ★IDA Pro      | 静态反汇编/反编译    | 拖入二进制 → F5 看伪代码X 查交叉引用、N 重命名→ 详见 [IDA Pro 指南](IDA_Pro实战使用指南.md) | 商业软件                                               |
 | Ghidra        | 开源逆向框架       | 导入 → 自动分析 → CodeBrowser右侧自动显示反编译伪代码                             | <https://github.com/NationalSecurityAgency/ghidra> |
 | x64dbg        | Windows 动态调试 | 下断点（F2）→ 单步（F8/F7）看寄存器/内存/堆栈                                    | <https://github.com/x64dbg/x64dbg>                 |
-| ★GDB + pwndbg | Linux 动态调试   | `gdb ./binary` → `b main` → `r`pwndbg 自动显示上下文、vmmap 看映射         | <https://github.com/pwndbg/pwndbg>                 |
+| ★GDB + pwndbg | Linux 动态调试   | `gdb ./binary` → `b *0x401234` → `r`vmmap/telescope/cyclic_find→ 详见 [GDB+pwndbg 指南](GDB+pwndbg实战使用指南.md) | <https://github.com/pwndbg/pwndbg>                 |
 | angr          | 符号执行         | 自动求解路径约束找成功分支地址 → explore(find=, avoid=)                        | <https://github.com/angr/angr>                     |
 | z3            | 约束求解器        | 建模逻辑约束 → `solver.check()` 求解逆向还原算法/flag 校验                      | <https://github.com/Z3Prover/z3>                   |
 | ltrace        | 库函数追踪        | `ltrace ./binary`看调用了哪些库函数及参数                                   | 系统自带                                               |
@@ -1380,7 +1381,7 @@ sage: f = FactorDB(n); f.connect(); p, q = f.get_factor_list()
 **工具选用建议**：
 
 - 静态逆向：IDA Pro ★ 行业标准，F5 反编译质量最高、调试器内置，完整用法见 [IDA Pro 指南](IDA_Pro实战使用指南.md)；无授权或需多人协作用 Ghidra（开源免费），两者反编译器各有盲区，IDA 失败时换 Ghidra 试试
-- 动态调试：Windows 程序用 x64dbg（GUI 友好）；Linux 程序用 GDB + pwndbg ★（pwndbg 增强后上下文清晰，PWN/逆向通用）；两者按目标平台选，不冲突
+- 动态调试：Windows 程序用 x64dbg（GUI 友好）；Linux 程序用 GDB + pwndbg ★（pwndbg 增强后上下文清晰，PWN/逆向通用），完整用法见 [GDB+pwndbg 指南](GDB+pwndbg实战使用指南.md)；两者按目标平台选，不冲突
 - 符号执行 vs 约束求解：angr 适合"找从入口到成功分支的输入"，自动探索路径；z3 适合"已知算法逻辑、求满足约束的输入"（如 flag 校验），更轻量可控；复杂题 angr 慢时拆出来用 z3
 - ROP gadget 查找：ROPgadget ★ Python 易用、输出清晰；ropper 功能更全（支持 JS 脚本），ROPgadget 失败时换 ropper
 - Android 逆向：jadx ★ 一键反编译出 Java 源码、GUI 浏览最方便，首选；apktool 反编译资源 + smali（改资源/重打包时用）；dex2jar 配合 jd-gui 是老方案，jadx 基本替代了它
@@ -1519,6 +1520,8 @@ if __name__ == "__main__":
 ```
 
 ### 4.4 GDB + pwndbg 常用命令
+
+> 完整用法（安装配置、断点管理、内存操作、pwntools 配合、题型实战等）见 [GDB+pwndbg 实战使用指南](GDB+pwndbg实战使用指南.md)。
 
 ```bash
 # 基本调试
@@ -1672,7 +1675,7 @@ jd-gui app.jar                # jd-gui 看 Java 源码（质量不如 jadx）
 ## 五、PWN 方向
 
 > 本方向重点推荐：★pwntools（PWN 框架，连接/打包/ROP/格式化字符串全包）｜★GDB + pwndbg（动态调试，vmmap/cyclic 利器）｜★ROPgadget（ROP gadget 查找，grep 过滤方便）
-> 使用方法：pwntools → 5.5 + 独立指南 ｜ GDB + pwndbg → 4.4 ｜ ROPgadget → 5.3
+> 使用方法：pwntools → 5.5 + 独立指南 ｜ GDB + pwndbg → 独立指南 ｜ ROPgadget → 5.3
 > 各相似工具组的选用逻辑见下方"工具选用建议"段落
 
 ### 5.1 工具清单
@@ -1680,7 +1683,7 @@ jd-gui app.jar                # jd-gui 看 Java 源码（质量不如 jadx）
 | 工具            | 用途               | 关键用法                                                                                                             | GitHub 地址                                     |
 | ------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | ★pwntools     | Python PWN 框架    | `from pwn import *remote(ip,port)`/`process()`、`p64`/`ROP`/`fmtstr_payload`→ 详见 [pwntools 指南](pwntools实战使用指南.md) | <https://github.com/Gallopsled/pwntools>      |
-| ★GDB + pwndbg | 动态调试             | `gdb ./binary` → `b *0x401234` → `r`vmmap 看映射、cyclic 找偏移                                                         | <https://github.com/pwndbg/pwndbg>            |
+| ★GDB + pwndbg | 动态调试             | `gdb ./binary` → `b *0x401234` → `r`vmmap/telescope/cyclic→ 详见 [GDB+pwndbg 指南](GDB+pwndbg实战使用指南.md)                            | <https://github.com/pwndbg/pwndbg>            |
 | ★ROPgadget    | ROP gadget 查找    | `ROPgadget --binary pwn \| grep "pop rdi"--rop` 自动生成 ROP chain                                                   | <https://github.com/JonathanSalwan/ROPgadget> |
 | ropper        | ROP gadget 查找    | `ropper --file pwn --search "pop rdi"`支持 JS 脚本、功能更全                                                              | <https://github.com/sashs/Ropper>             |
 | one\_gadget   | execve gadget 查找 | `one_gadget libc.so`找直接 getshell 的 gadget（注意约束）                                                                  | <https://github.com/david942j/one_gadget>     |
@@ -1691,7 +1694,7 @@ jd-gui app.jar                # jd-gui 看 Java 源码（质量不如 jadx）
 **工具选用建议**：
 
 - PWN 框架：pwntools ★ 必装，连接/打包/ROP/格式化字符串全包，完整 API 与模板见 [pwntools 指南](pwntools实战使用指南.md)
-- 动态调试：GDB + pwndbg ★ Linux PWN 标配，pwndbg 增强后寄存器/栈/反汇编一目了然；Windows 程序换 x64dbg
+- 动态调试：GDB + pwndbg ★ Linux PWN 标配，pwndbg 增强后寄存器/栈/反汇编一目了然，完整用法见 [GDB+pwndbg 指南](GDB+pwndbg实战使用指南.md)；Windows 程序换 x64dbg
 - ROP gadget 查找：ROPgadget ★ Python 易用、grep 过滤方便，日常首选；ropper 功能更全（支持搜索语义、JS 脚本扩展），ROPgadget 找不全时换 ropper
 - 直接 getshell：one\_gadget 找 libc 里直接 execve("/bin/sh") 的 gadget，省去构造 ROP 链；但每个 gadget 有约束条件（如 `rcx == NULL`），不满足会失败，需配合其他 gadget 调整寄存器
 - 沙箱题：seccomp-tools dump 出规则后看允许哪些系统调用；常见 orw（open/read/write）沙箱禁了 execve，需用 ROP 调 open+read+write 读 flag
