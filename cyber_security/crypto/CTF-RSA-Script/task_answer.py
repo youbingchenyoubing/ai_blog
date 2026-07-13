@@ -15,6 +15,11 @@ CTF Crypto Challenge - Complete Solver
 """
 
 from math import gcd, lcm
+import sys
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # 强制 stdout 使用 utf-8, 避免 Windows GBK 编不下 ✓ 等符号
+except AttributeError:
+    pass
 from Crypto.Util.number import long_to_bytes, isPrime
 
 # ============================================================
@@ -40,54 +45,83 @@ c_2 = 55312120533067544987183869320534977277494480648083277810412946782179206524
 #        → a^M ≡ 1 (mod p) → gcd(a^M - 1, n) 被 p 整除
 #     4. d = gcd(a^M - 1, n), 若 1 < d < n, 则 d 就是 p 的一个因子
 
-def pollard_pm1(n, B=2**21):
-    """
-    Pollard p-1 算法
-    n: 待分解的合数
-    B: 光滑界, 需要覆盖 p-1 的最大素因子
-       p-1 的最大素因子约为 2^20 (getPrime(20)), 取 B = 2^21 足够
-    返回: n 的一个非平凡因子, 或 None
-    """
-    # 计算 M: 对所有 ≤ B 的素数, 将其最高幂次 ≤ B 的值累乘
-    # 等价于 M = lcm(1, 2, ..., B), 但用素数幂累乘更高效
-    a = 2  # 随机基, 2 即可
-    # 筛法生成 ≤ B 的所有素数
-    primes = []
-    sieve = [True] * (B + 1)
-    for i in range(2, B + 1):
+def _sieve_primes(B):
+    """埃氏筛生成 <= B 的所有素数"""
+    if B < 2:
+        return []
+    sieve = bytearray([1]) * (B + 1)
+    sieve[0:2] = b"\x00\x00"
+    i = 2
+    while i * i <= B:
         if sieve[i]:
-            primes.append(i)
-            for j in range(i * i, B + 1, i):
-                sieve[j] = False
+            sieve[i * i:: i] = b"\x00" * len(sieve[i * i:: i])
+        i += 1
+    return [i for i in range(2, B + 1) if sieve[i]]
 
-    print(f"  [*] 光滑界 B = 2^21 = {B}")
-    print(f"  [*] 素数个数: {len(primes)}")
-
-    # 对每个素数 l, 计算 l^k ≤ B 的最高幂次, 然后 a = a^(l^k) mod n
-    for prime in primes:
-        # 找到最大的 pk 使得 prime^pk ≤ B
-        pk = prime
-        while pk * prime <= B:
-            pk *= prime
+def pollard_pm1(n, B, base=2, check_every=2000):
+    """
+    返回 (state, factor):
+      state == 'factor' -> factor 为非平凡因子
+      state == 'both'   -> gcd == n, 两个因子同时被覆盖, B 偏大
+      state == 'trivial' -> gcd == 1, B 偏小 (或基不合适)
+    """
+    primes = _sieve_primes(B)
+    a = base
+    cnt = 0
+    for pr in primes:
+        pk = pr
+        while pk * pr <= B:
+            pk *= pr
         a = pow(a, pk, n)
-
+        cnt += 1
+        if cnt % check_every == 0:
+            d = gcd(a - 1, n)
+            if d == n:
+                return ('both', None)
+            if 1 < d < n:
+                return ('factor', d)
     d = gcd(a - 1, n)
+    if d == n:
+        return ('both', None)
     if 1 < d < n:
-        return d
-    return None
+        return ('factor', d)
+    return ('trivial', None)
+
+def pollard_pm1_auto(n, B_init=1 << 19, B_max=1 << 22):
+    """
+    自动调整 B:
+      state == 'both'     -> B 太大, 让一个因子先被完整覆盖 -> 调小 B
+      state == 'trivial'  -> B 太小, 没覆盖一个因子       -> 增大 B
+      state == 'factor'   -> 返回该因子
+    同一 B 多个底数 (2,3,5,7) 都失败才换方向
+    """
+    B = B_init
+    while True:
+        print(f"  [*] 尝试 B = {B}")
+        saw_both = False
+        for base in (2, 3, 5, 7):
+            state, d = pollard_pm1(n, B, base=base, check_every=500)
+            if state == 'factor':
+                return d
+            if state == 'both':
+                saw_both = True
+                break                       # 同一 B 下换基也没意义, 直接降 B
+        if saw_both:
+            if B <= 1 << 15:
+                return None
+            B >>= 1
+        else:
+            if B >= B_max:
+                return None
+            B <<= 1
 
 print("=" * 60)
 print("Step 1: Pollard p-1 攻击分解 n")
 print("=" * 60)
 print(f"  [*] 原理: p-1 是光滑数 (所有素因子 ≤ 2^20), 适用 Pollard p-1")
 print(f"  [*] gen_prime 中 p-1 = ∏getPrime(20) × ∏small_primes")
-print(f"  [*] 最大素因子约为 2^20 ≈ 10^6, 光滑界取 B = 2^21 即可")
 
-p = pollard_pm1(n, B=2**21)
-if p is None:
-    # 如果 B 不够大, 尝试更大的界
-    print("  [-] B=2^21 失败, 尝试 B=2^22...")
-    p = pollard_pm1(n, B=2**22)
+p = pollard_pm1_auto(n, B_init=1 << 19, B_max=1 << 22)
 
 q = n // p
 assert p * q == n and isPrime(p) and isPrime(q), "分解验证失败"
@@ -238,6 +272,18 @@ def crt_solve(residues, moduli):
         m = m * n_g  # lcm(m, n)
     return x % m
 
+def element_order(g, p, prime_factors_of_pm1):
+    """
+    求 g 在 F_p^* 里的阶.
+    prime_factors_of_pm1: p-1 的素因子列表 (任意次幂均可, 只要包含每个素数即可)
+    返回 ord(g) | p-1
+    """
+    order = p - 1
+    for pr in prime_factors_of_pm1:
+        while order % pr == 0 and pow(g, order // pr, p) == 1:
+            order //= pr
+    return order
+
 print("\n" + "=" * 60)
 print("Step 3: Pohlig-Hellman 求解离散对数 c_2 → m_2")
 print("=" * 60)
@@ -272,11 +318,20 @@ assert pow(e_q, m2_mod_q, q) == c2_q, "mod q 离散对数验证失败"
 print(f"  [+] 验证: e^(m_2 mod q-1) ≡ c_2 (mod q) ✓")
 
 # ---- 3c: CRT 合并 ----
-print("\n  [*] 3c: CRT 合并 m_2 mod (p-1) 和 m_2 mod (q-1)")
-print(f"  [*] gcd(p-1, q-1) = {gcd(p-1, q-1)}")
-L = lcm(p - 1, q - 1)
-m_2 = crt_solve([m2_mod_p, m2_mod_q], [p - 1, q - 1])
-print(f"  [*] lcm(p-1, q-1) 位数: {L.bit_length()}")
+print("\n  [*] 3c: 合并 m_2 mod ord_p(e) 和 m_2 mod ord_q(e)")
+# 重要: DLP 在 F_p^* 的解空间模是 ord(e), 而不是 p-1
+#       因为 e 的阶 ord_p(e) | (p-1), 而 m_2 唯一仅由 ord_p(e) 决定
+#       直接把 (m2_mod_p, p-1) 与 (m2_mod_q, q-1) 做广义 CRT, 因为
+#       gcd(p-1, q-1) 可能整除 (m_p - m_q) 的真值又恰好不整除残差 -- 看似无解
+#       合并算法必须使用真正的群阶 ord(e).
+order_p = element_order(e_p, p, [l for (l, _) in factors_p])
+order_q = element_order(e_q, q, [l for (l, _) in factors_q])
+print(f"  [*] ord_p(e) = {order_p}")
+print(f"  [*] ord_q(e) = {order_q}")
+print(f"  [*] gcd(ord_p, ord_q) = {gcd(order_p, order_q)}")
+L = lcm(order_p, order_q)
+m_2 = crt_solve([m2_mod_p % order_p, m2_mod_q % order_q], [order_p, order_q])
+print(f"  [*] lcm(ord_p, ord_q) 位数: {L.bit_length()}")
 print(f"  [+] m_2 = {m_2}")
 
 # 验证
