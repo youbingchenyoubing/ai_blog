@@ -723,78 +723,56 @@ def multi_prime_rsa_decrypt(c, primes, e):
 
 ### 3.13 RSA 综合解题模板
 
+完整脚本已抽离到 `ctf_scripts/rsa_template.py`，基于 `ctf_scripts/rsa_attacks.py` 已实现的攻击函数构建，根据题目条件**从快到慢自动选择攻击方法**，覆盖以下分支：
+
+| 顺序 | 攻击 | 触发条件 |
+| --- | --- | --- |
+| 1 | 直接解密 | 已知 p/ q / d |
+| 2 | dp 泄露 | 已知 dp |
+| 3 | 共享因子 | 多组 n 共享 p |
+| 4 | 共模攻击 | 同 n 不同 e，gcd(e₁,e₂)=1 |
+| 5 | Håstad 广播 | ≥ e 组密文 |
+| 6 | 小指数攻击 | e ≤ 5 |
+| 7 | factordb 查询 | n 已被收录 |
+| 8 | Wiener | e > n^0.3 |
+| 9 | Fermat 分解 | p ≈ q |
+| 10 | Pollard p-1 | p-1 平滑 |
+
+**最简用法（填参数即跑）**：
+
 ```python
-#!/usr/bin/env python3
-"""
-RSA 综合解题模板
-根据题目条件取消注释对应攻击
-"""
-
-from math import gcd, isqrt
-from gmpy2 import iroot
-
-def int_to_bytes(n):
-    length = (n.bit_length() + 7) // 8
-    return n.to_bytes(length, 'big')
-
-# ===== 题目参数 =====
-n = 0  # 填入
-e = 0  # 填入
-c = 0  # 填入
-
-# ===== 已知条件（根据题目填写）=====
-p = None   # 如果已知 p
-q = None   # 如果已知 q
-d = None   # 如果已知 d
-dp = None  # 如果已知 dp
-
-# ===== 第一步：查 factordb =====
-# 手动访问 http://factordb.com/ 输入 n
-# 状态 FF → 直接拿 p, q
-# 状态 C  → 继续下方攻击
-
-# ===== 第二步：选攻击方法 =====
-
-# --- 已知 p, q → 直接解密 ---
-if p and q:
-    assert p * q == n
-    phi = (p - 1) * (q - 1)
-    d = pow(e, -1, phi)
-    m = pow(c, d, n)
-    print(f"[直接解密] flag = {int_to_bytes(m)}")
-
-# --- e=3 小指数 ---
-if e <= 5 and not p:
-    m = small_e_overflow(c, e, n)
-    if m:
-        print(f"[小指数攻击] flag = {int_to_bytes(m)}")
-
-# --- e 很大 → Wiener ---
-if e > n ** 0.3 and not p:
-    result = wiener_attack(e, n)
-    if result:
-        d, p, q = result
-        m = pow(c, d, n)
-        print(f"[Wiener攻击] flag = {int_to_bytes(m)}")
-
-# --- p, q 接近 → Fermat ---
-if not p:
-    p, q = fermat_factor(n)
-    if p and q:
-        phi = (p - 1) * (q - 1)
-        d = pow(e, -1, phi)
-        m = pow(c, d, n)
-        print(f"[Fermat分解] flag = {int_to_bytes(m)}")
-
-# --- dp 泄露 ---
-if dp and not p:
-    p, q = dp_leak_attack(e, n, dp)
-    if p and q:
-        phi = (p - 1) * (q - 1)
-        d = pow(e, -1, phi)
-        m = pow(c, d, n)
-        print(f"[dp泄露] flag = {int_to_bytes(m)}")
+# 编辑 ctf_scripts/rsa_template.py 的 main()，填入 n, e, c
+python3 ctf_scripts/rsa_template.py
 ```
+
+**库方式调用（推荐，便于扩展）**：
+
+```python
+import sys
+sys.path.insert(0, 'ctf_scripts')
+from rsa_template import RSASolver
+
+# 单组密文
+solver = RSASolver(n=N, e=E, c=C)
+m = solver.solve()                 # 自动尝试所有攻击
+
+# 已知额外信息
+RSASolver(n=N, e=E, c=C, p=P, q=Q).solve()
+RSASolver(n=N, e=E, c=C, dp=DP).solve()
+RSASolver(n=N, e=E, c=C, d=D).solve()
+
+# 多组密文（共模 / 广播 / 共享因子）
+solver = RSASolver(n=N1, e=E1, c=C1)
+solver.add_group(c=C2, e=E2, n=N1)   # 相同 n = 共模
+solver.add_group(c=C2, e=E1, n=N2)   # 不同 n = 广播 / 共享因子
+solver.solve()
+```
+
+**所有内置攻击都失败时**会提示后续思路：
+- 上 `RsaCtfTool --attack all`
+- 用 SageMath Coppersmith（已知明文高位 / 已知 p 高位）
+- Boneh-Durfee（d < n^0.292）
+- d 泄露反推 p, q
 
 ***
 

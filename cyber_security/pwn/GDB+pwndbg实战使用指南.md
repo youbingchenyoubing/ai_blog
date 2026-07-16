@@ -147,8 +147,6 @@ EOF
 ```bash
 # Kali 通常已预装 GDB，但版本可能较旧
 # 升级 GDB
-sudo apt update && sudo apt install -y gdb
-
 # pwndbg 在 Kali 上直接 git clone + setup.sh 即可
 
 # 如果遇到 capstone 编译错误

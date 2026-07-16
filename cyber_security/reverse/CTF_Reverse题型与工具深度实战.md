@@ -1088,7 +1088,7 @@ public class FindTEA extends GhidraScript {
 
 ## 十一、工具深度用法：GDB 动态调试
 
-> 基础用法见 [GDB+pwndbg 实战使用指南](GDB+pwndbg实战使用指南.md)，这里聚焦逆向场景的高级调试手法。
+> 基础用法见 [GDB+pwndbg 实战使用指南](../pwn/GDB+pwndbg实战使用指南.md)，这里聚焦逆向场景的高级调试手法。
 
 ### 11.1 逆向场景下 GDB 的核心用法
 

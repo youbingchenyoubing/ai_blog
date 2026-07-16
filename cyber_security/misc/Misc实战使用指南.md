@@ -157,7 +157,7 @@ base64.b16decode("666C61677B68656C6C6F7D")
 
 ### 3.3 CyberChef 深度使用
 
-> CyberChef 完整操作分类、Recipe 管理、Magic 深度、Registers/Fork 进阶见 [CyberChef 实战使用指南](CyberChef实战使用指南.md)。
+> CyberChef 完整操作分类、Recipe 管理、Magic 深度、Registers/Fork 进阶见 [CyberChef 实战使用指南](../crypto/CyberChef实战使用指南.md)。
 
 **编码解码场景下 CyberChef 最佳实践**：
 
