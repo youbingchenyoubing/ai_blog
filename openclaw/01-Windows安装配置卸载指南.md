@@ -124,7 +124,10 @@ iwr -useb https://openclaw.ai/install.ps1 | iex
 docker --version
 docker compose version
 ```
-
+自定义自己的OPENCLAW_GATEWAY_TOKEN
+```shell
+[BitConverter]::ToString([byte[]](1..32 | % {Get-Random -Maximum 256})).Replace("-","").ToLower()
+```
 #### 2. 方式一：使用预构建镜像（快速启动）
 
 直接拉取官方预构建镜像并运行：
@@ -748,6 +751,14 @@ rmdir /s /q D:\docker_env\openclaw
 docker system prune -a
 ```
 
+```shell
+# 绑定移动端
+docker exec openclaw-gateway sh -c "openclaw qr --host 192.168.137.1"
+
+docker exec openclaw-gateway openclaw devices approve f081ca3d-a529-4f6e-87c3-eb34306574a3
+
+docker exec openclaw-gateway openclaw nodes pending 
+```
 ---
 
 ## 六、常见问题

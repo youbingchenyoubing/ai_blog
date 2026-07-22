@@ -1,284 +1,539 @@
 {
-  // 模型配置
-  agents: {
-    defaults: {
-      model: {
-        // 主模型：千问3.7 Max，1M上下文，中文最强
-        primary: "bailian/qwen3.7-max",
-        // 回退模型：主模型不可用时依次尝试（百炼优先，NVIDIA兜底）
-        fallbacks: [
+  "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "port": 18789
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "model": {
+        "primary": "bailian/qwen3.7-max",
+        "fallbacks": [
           "bailian/qwen3.7-plus",
-          "bailian/deepseek-v4-pro",
-          "bailian/glm-5.2",
+          "bailian/qwen3.6-plus",
           "bailian/qwen3.6-flash",
-          // NVIDIA NIM 兜底（免费，40 RPM 限制）
-          "nvidia/nvidia/nemotron-3-ultra-550b-a55b",
-          "nvidia/nvidia/nemotron-3-super-120b-a12b",
-          "nvidia/deepseek-ai/deepseek-v4-pro",
+          "bailian/deepseek-v4-pro",
+          "bailian/deepseek-v4-flash",
+          "bailian/kimi-k2.7-code",
+          "bailian/kimi-k2.6",
+          "bailian/glm-5.2",
+          "bailian/glm-5.1",
+          "bailian/MiniMax-M2.5",
           "nvidia/qwen/qwen3.5-397b-a17b",
           "nvidia/z-ai/glm-5.2",
           "nvidia/moonshotai/kimi-k2.6",
           "nvidia/minimaxai/minimax-m3",
-        ],
+          "nvidia/nemotron-3-ultra-550b-a55b",
+          "nvidia/nemotron-3-super-120b-a12b",
+          "nvidia/deepseek-ai/deepseek-v4-pro"
+        ]
       },
-      models: {
-        "bailian/qwen3.7-max": { alias: "千问3.7Max" },
-        "bailian/qwen3.7-plus": { alias: "千问3.7Plus" },
-        "bailian/qwen3.6-plus": { alias: "千问3.6Plus" },
-        "bailian/qwen3.6-flash": { alias: "千问3.6Flash" },
-        "bailian/deepseek-v4-pro": { alias: "DS-V4Pro" },
-        "bailian/deepseek-v4-flash": { alias: "DS-V4Flash" },
-        "bailian/deepseek-v3.2": { alias: "DS-V3.2" },
-        "bailian/kimi-k2.7-code": { alias: "Kimi代码" },
-        "bailian/kimi-k2.6": { alias: "Kimi-K2.6" },
-        "bailian/glm-5.2": { alias: "GLM-5.2" },
-        "bailian/glm-5.1": { alias: "GLM-5.1" },
-        "bailian/MiniMax-M2.5": { alias: "MiniMax" },
-        // NVIDIA NIM（免费，40 RPM 限制）
-        "nvidia/nvidia/nemotron-3-ultra-550b-a55b": { alias: "NemotronUltra" },
-        "nvidia/nvidia/nemotron-3-super-120b-a12b": { alias: "NemotronSuper" },
-        "nvidia/deepseek-ai/deepseek-v4-pro": { alias: "NV-DSV4Pro" },
-        "nvidia/qwen/qwen3.5-397b-a17b": { alias: "NV-Qwen3.5" },
-        "nvidia/z-ai/glm-5.2": { alias: "NV-GLM5.2" },
-        "nvidia/moonshotai/kimi-k2.6": { alias: "NV-KimiK2.6" },
-        "nvidia/minimaxai/minimax-m3": { alias: "NV-MiniMaxM3" },
-      },
-    },
+      "models": {
+        "bailian/qwen3.7-max": {
+          "alias": "千问3.7Max"
+        },
+        "bailian/qwen3.7-plus": {
+          "alias": "千问3.7Plus"
+        },
+        "bailian/qwen3.6-plus": {
+          "alias": "千问3.6Plus"
+        },
+        "bailian/qwen3.6-flash": {
+          "alias": "千问3.6Flash"
+        },
+        "bailian/deepseek-v4-pro": {
+          "alias": "DS-V4Pro"
+        },
+        "bailian/deepseek-v4-flash": {
+          "alias": "DS-V4Flash"
+        },
+        "bailian/deepseek-v3.2": {
+          "alias": "DS-V3.2"
+        },
+        "bailian/kimi-k2.7-code": {
+          "alias": "Kimi代码"
+        },
+        "bailian/kimi-k2.6": {
+          "alias": "Kimi-K2.6"
+        },
+        "bailian/kimi-k2.5": {
+          "alias": "Kimi-K2.5"
+        },
+        "bailian/glm-5.2": {
+          "alias": "GLM-5.2"
+        },
+        "bailian/glm-5.1": {
+          "alias": "GLM-5.1"
+        },
+        "bailian/glm-5": {
+          "alias": "GLM-5"
+        },
+        "bailian/MiniMax-M2.5": {
+          "alias": "MiniMax"
+        },
+        "nvidia/nemotron-3-ultra-550b-a55b": {
+          "alias": "NemotronUltra"
+        },
+        "nvidia/nemotron-3-super-120b-a12b": {
+          "alias": "NemotronSuper"
+        },
+        "nvidia/deepseek-ai/deepseek-v4-pro": {
+          "alias": "NV-DSV4Pro"
+        },
+        "nvidia/qwen/qwen3.5-397b-a17b": {
+          "alias": "NV-Qwen3.5"
+        },
+        "nvidia/z-ai/glm-5.2": {
+          "alias": "NV-GLM5.2"
+        },
+        "nvidia/moonshotai/kimi-k2.6": {
+          "alias": "NV-KimiK2.6"
+        },
+        "nvidia/minimaxai/minimax-m3": {
+          "alias": "NV-MiniMaxM3"
+        }
+      }
+    }
   },
-
-  // 模型提供商配置
-  models: {
-    providers: {
-      // 阿里云百炼（千问系列 + 第三方模型）
-      bailian: {
-        // OpenAI 兼容端点（/compatible-mode/v1）
-        // 若使用 Anthropic 协议，改为 /apps/anthropic 并设置 api: "anthropic"
-        baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
-        api: "openai-completions",
-        apiKey: "${DASHSCOPE_API_KEY}",
-        models: [
+  "models": {
+    "providers": {
+      "bailian": {
+        "baseUrl": "https://ws-162o7gt1kf91zrjs.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+        "api": "openai-completions",
+        "apiKey": "${DASHSCOPE_API_KEY}",
+        "models": [	
           {
-            id: "qwen3.7-max",
-            name: "Qwen3.7 Max",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 1000000,
-            maxTokens: 65536,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "qwen3.7-max",
+            "name": "Qwen3.7 Max",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1000000,
+            "maxTokens": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "qwen3.7-plus",
-            name: "Qwen3.7 Plus",
-            reasoning: false,
-            input: ["text", "image"],
-            contextWindow: 1000000,
-            maxTokens: 65536,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "qwen3.7-plus",
+            "name": "Qwen3.7 Plus",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 1000000,
+            "maxTokens": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "qwen3.6-plus",
-            name: "Qwen3.6 Plus",
-            reasoning: false,
-            input: ["text", "image"],
-            contextWindow: 1000000,
-            maxTokens: 65536,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "qwen3.6-plus",
+            "name": "Qwen3.6 Plus",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 1000000,
+            "maxTokens": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "qwen3.6-flash",
-            name: "Qwen3.6 Flash",
-            reasoning: false,
-            input: ["text", "image"],
-            contextWindow: 1000000,
-            maxTokens: 32768,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "qwen3.6-flash",
+            "name": "Qwen3.6 Flash",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 1000000,
+            "maxTokens": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "deepseek-v4-pro",
-            name: "DeepSeek V4 Pro",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 163840,
-            maxTokens: 32768,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            "id": "deepseek-v4-pro",
+            "name": "DeepSeek V4 Pro",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 163840,
+            "maxTokens": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
           },
           {
-            id: "deepseek-v4-flash",
-            name: "DeepSeek V4 Flash",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 163840,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            "id": "deepseek-v4-flash",
+            "name": "DeepSeek V4 Flash",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 163840,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
           },
           {
-            id: "deepseek-v3.2",
-            name: "DeepSeek V3.2",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 163840,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "deepseek-v3.2",
+            "name": "DeepSeek V3.2",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 163840,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "kimi-k2.7-code",
-            name: "Kimi K2.7 Code",
-            reasoning: false,
-            input: ["text", "image"],
-            contextWindow: 262144,
-            maxTokens: 32768,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "kimi-k2.7-code",
+            "name": "Kimi K2.7 Code",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "kimi-k2.6",
-            name: "Kimi K2.6",
-            reasoning: false,
-            input: ["text", "image"],
-            contextWindow: 262144,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "kimi-k2.6",
+            "name": "Kimi K2.6",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "kimi-k2.5",
-            name: "Kimi K2.5",
-            reasoning: false,
-            input: ["text", "image"],
-            contextWindow: 262144,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "kimi-k2.5",
+            "name": "Kimi K2.5",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "glm-5.2",
-            name: "GLM 5.2",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 1000000,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "glm-5.2",
+            "name": "GLM 5.2",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1000000,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "glm-5.1",
-            name: "GLM 5.1",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 202752,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "glm-5.1",
+            "name": "GLM 5.1",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 202752,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "glm-5",
-            name: "GLM 5",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 202752,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "glm-5",
+            "name": "GLM 5",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 202752,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "MiniMax-M2.5",
-            name: "MiniMax M2.5",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 204800,
-            maxTokens: 131072,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-          },
-        ],
+            "id": "MiniMax-M2.5",
+            "name": "MiniMax M2.5",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 204800,
+            "maxTokens": 131072,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          }
+        ]
       },
-      // NVIDIA NIM（免费，40 RPM 限制）
-      nvidia: {
-        baseUrl: "https://integrate.api.nvidia.com/v1",
-        api: "openai-completions",
-        apiKey: "${NVIDIA_API_KEY}",
-        models: [
+      "nvidia": {
+        "baseUrl": "https://integrate.api.nvidia.com/v1",
+        "api": "openai-completions",
+        "apiKey": "${NVIDIA_API_KEY}",
+        "models": [
           {
-            id: "nvidia/nemotron-3-ultra-550b-a55b",
-            name: "Nemotron 3 Ultra 550B",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 1000000,
-            maxTokens: 65536,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "nvidia/nemotron-3-ultra-550b-a55b",
+            "name": "Nemotron 3 Ultra 550B",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1000000,
+            "maxTokens": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "nvidia/nemotron-3-super-120b-a12b",
-            name: "Nemotron 3 Super 120B",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 1000000,
-            maxTokens: 65536,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "nvidia/nemotron-3-super-120b-a12b",
+            "name": "Nemotron 3 Super 120B",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1000000,
+            "maxTokens": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "deepseek-ai/deepseek-v4-pro",
-            name: "DeepSeek V4 Pro (NVIDIA)",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 262144,
-            maxTokens: 32768,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "deepseek-ai/deepseek-v4-pro",
+            "name": "DeepSeek V4 Pro (NVIDIA)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "qwen/qwen3.5-397b-a17b",
-            name: "Qwen3.5 397B (NVIDIA)",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 262144,
-            maxTokens: 32768,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "qwen/qwen3.5-397b-a17b",
+            "name": "Qwen3.5 397B (NVIDIA)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "z-ai/glm-5.2",
-            name: "GLM 5.2 (NVIDIA)",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 202752,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "z-ai/glm-5.2",
+            "name": "GLM 5.2 (NVIDIA)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 202752,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "moonshotai/kimi-k2.6",
-            name: "Kimi K2.6 (NVIDIA)",
-            reasoning: false,
-            input: ["text", "image"],
-            contextWindow: 262144,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
+            "id": "moonshotai/kimi-k2.6",
+            "name": "Kimi K2.6 (NVIDIA)",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
           },
           {
-            id: "minimaxai/minimax-m3",
-            name: "MiniMax M3 (NVIDIA)",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 196608,
-            maxTokens: 16384,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            compat: { thinkingFormat: "openai" },
-          },
-        ],
-      },
-    },
+            "id": "minimaxai/minimax-m3",
+            "name": "MiniMax M3 (NVIDIA)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 196608,
+            "maxTokens": 16384,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "thinkingFormat": "openai"
+            }
+          }
+        ]
+      }
+    }
   },
-
-  // 工作区
-  agent: {
-    workspace: "~/.openclaw/workspace",
+  "plugins": {
+    "entries": {
+      "feishu": {
+        "enabled": true
+      }
+    }
   },
+  "channels": {
+    "feishu": {
+      "enabled": true,
+      "groupPolicy": "open",
+      "appId": "cli_a69bf88755f9100e",
+      "appSecret": "9qDUDX6NAUBj1s8zW0SFWc6kTWrp4Ds7",
+      "requireMention": true
+    }
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.7.1",
+    "lastTouchedAt": "2026-07-21T12:53:10.100Z"
+  },
+  "commands": {
+    "ownerAllowFrom": [
+      "feishu:ou_1d8743fdd650b84908c6ea3cbff9cb5f"
+    ]
+  }
 }
